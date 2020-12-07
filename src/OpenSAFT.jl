@@ -1,5 +1,6 @@
 module OpenSAFT
-
+import CSV
+import Tables
 using NLopt, NLsolve, DiffResults, ForwardDiff, LinearAlgebra, StaticArrays
 include("solvers/Solvers.jl")
 using .Solvers
