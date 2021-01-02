@@ -30,6 +30,17 @@ function x0_volume(model::EoS,z; phase = "unknown")
 end
 =#
 #=x0_volume=#
+function x0_volume(model::SAFTgammaMie,z; phase = "unknown")
+    if phase == "unknown" || is_liquid(phase)
+            x0 = [log10(π/6*N_A*sum(z[i]*sum(model.group_multiplicities[i][k]*model.params.segment[k]*model.params.shapefactor[k]*model.params.sigma[k]^3 for k in @groups(i)) for i in @comps)/0.8)]
+    elseif is_vapour(phase)
+            x0 = [log10(π/6*N_A*sum(z[i]*sum(model.group_multiplicities[i][k]*model.params.segment[k]*model.params.shapefactor[k]*model.params.sigma[k]^3 for k in @groups(i)) for i in @comps)/1e-2)]
+    elseif is_supercritical(phase)
+            x0 = [log10(π/6*N_A*sum(z[i]*sum(model.group_multiplicities[i][k]*model.params.segment[k]*model.params.shapefactor[k]*model.params.sigma[k]^3 for k in @groups(i)) for i in @comps)/0.5)]
+    end
+    return x0
+end
+
 function x0_volume(model::SAFT,z; phase = "unknown")
     if phase == "unknown" || is_liquid(phase)
         x0 = [log10(π/6*N_A*sum(z[i]*model.params.segment[i]*model.params.sigma[i]^3 for i in model.components)/0.8)]
@@ -54,7 +65,7 @@ end
 #=x0_sat_pure=#
 
 function x0_sat_pure(model::SAFTgammaMie)
-    x0    = [log10(π/6*N_A*sum(model.group_multiplicities[model.components[1]][k]*model.params.segment[k]*model.params.shapefactor[k]*model.params.sigma[k]^3 for k in @groups(model.components[1]))/0.45),
+    x0    = [log10(π/6*N_A*sum(model.group_multiplicities[model.components[1]][k]*model.params.segment[k]*model.params.shapefactor[k]*model.params.sigma[k]^3 for k in @groups(model.components[1]))/0.5),
     log10(π/6*N_A*sum(model.group_multiplicities[model.components[1]][k]*model.params.segment[k]*model.params.shapefactor[k]*model.params.sigma[k]^3 for k in @groups(model.components[1]))/1e-3)]
 end
 
@@ -64,7 +75,7 @@ function x0_sat_pure(model::SAFTVRQMie)
 end
 
 function x0_sat_pure(model::SAFT)
-    x0    = [log10(π/6*N_A*model.params.segment[model.components[1]]*model.params.sigma[model.components[1]]^3/0.45),
+    x0    = [log10(π/6*N_A*model.params.segment[model.components[1]]*model.params.sigma[model.components[1]]^3/0.5),
     log10(π/6*N_A*model.params.segment[model.components[1]]*model.params.sigma[model.components[1]]^3/1e-3)]
 end
 
@@ -108,9 +119,10 @@ end
 
 #=x0_crit_pure=#
 
-x0_crit_pure(model::SAFTgammaMie) = [1.5, log10(π/6*N_A*sum(model.group_multiplicities[model.components[1]][k]*model.params.segment[k]*model.params.shapefactor[k]*model.params.sigma[k]^3 for k in @groups(model.components[1]))/0.3)]
+x0_crit_pure(model::SAFTgammaMie) = [2, log10(π/6*N_A*sum(model.group_multiplicities[model.components[1]][k]*model.params.segment[k]*model.params.shapefactor[k]*model.params.sigma[k]^3 for k in @groups(model.components[1]))/0.3)]
 x0_crit_pure(model::SAFT) = [1.5, log10(π/6*N_A*model.params.segment[model.components[1]]*model.params.sigma[model.components[1]]^3/0.3)]
 x0_crit_pure(model::Cubic) = [1.0, log10(model.params.b[model.components[1]]/0.3)]
+x0_crit_pure(model::CPA) = [2, log10(model.params.b[model.components[1]]/0.3)]
 
 
 

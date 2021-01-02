@@ -30,6 +30,26 @@ struct SAFTVRMieParams <: Params
     n_sites::Dict
 end
 
+struct CKSAFTParams <: Params
+    segment::Dict
+    sigma::Dict
+    epsilon::Dict
+    c::Dict
+    epsilon_assoc::Dict
+    bond_vol::Dict
+    n_sites::Dict
+end
+
+struct SAFTVRSWParams <: Params
+    segment::Dict
+    sigma::Dict
+    epsilon::Dict
+    lambda::Dict
+    epsilon_assoc::Dict
+    bond_vol::Dict
+    n_sites::Dict
+end
+
 struct SAFTVRQMieParams <: Params
     MolarMass::Dict
     segment::Dict
@@ -49,6 +69,15 @@ struct ogSAFTParams <: Params
     epsilon_assoc::Dict
     bond_vol::Dict
     n_sites::Dict
+end
+
+struct softSAFTParams <: Params
+    segment::Dict #type: Dict{String,Float64}, can be changed to vector
+    sigma::Dict #matrix of values
+    epsilon::Dict #matrix of values
+    epsilon_assoc::Dict #look on how to port this
+    bond_vol::Dict #look on how to port this Dict{Set{Tuple{Set{String},String}},Float64}
+    n_sites::Dict #dict of dicts
 end
 
 struct SAFTgammaMieParams <: Params

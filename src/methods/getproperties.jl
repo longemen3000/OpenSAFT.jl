@@ -17,7 +17,7 @@ function ∂f(model,v,t,z)
     f(w) = eos(model,z,first(w),last(w))
     v,t = promote(v,t)
     vt_vec = SVector(v,t)
-    ∂result = DiffResults.GradientResult(vt_vec)  
+    ∂result = DiffResults.GradientResult(vt_vec)
     res_∂f =  ForwardDiff.gradient!(∂result, f,vt_vec)
     _f =  DiffResults.value(res_∂f)
     _∂f = DiffResults.gradient(res_∂f)
@@ -55,9 +55,8 @@ function get_volume(model::EoS, p, T, z=[1.]; phase = "unknown")
 
     ub = [Inf]
     lb = lb_volume(model,z; phase = phase)
-
     x0 = x0_volume(model,z; phase = phase)
-    f = v -> eos(model, z, exp10(v), T) + exp10(v)*p
+    f = v -> eos(model, z, exp10(v[1]), T) + exp10(v[1])*p
     if phase == "unknown"
         (f_best,v_best) = Solvers.tunneling(f,lb,ub,x0)
         return exp10(v_best[1])
@@ -76,17 +75,81 @@ end
 
 
 ## Pure saturation conditions solver
-function get_sat_pure(model::EoS, T)
+function get_sat_pure(model::EoS, T; v0 = nothing)
     components = model.components
-    v0    = x0_sat_pure(model)
-        f! = (F,x) -> Obj_Sat(model, F, T, exp10(x[1]), exp10(x[2]))
-        j! = (J,x) -> Jac_Sat(model, J, T, exp10(x[1]), exp10(x[2]))
-        r  =nlsolve(f!,j!,v0)
-        v_l = exp10(r.zero[1])
-        v_v = exp10(r.zero[2])
-        P_sat = get_pressure(model,v_v,T)
-        v0 = r.zero
-    return (P_sat, v_l, v_v)
+
+    f! = (F,x) -> Obj_Sat(model, F, T, exp10(x[1]), exp10(x[2]))
+    j! = (J,x) -> Jac_Sat(model, J, T, exp10(x[1]), exp10(x[2]))
+    fj! = (F,J,x) -> Obj_Jac_sat(model,F,J,T,exp10(x[1]), exp10(x[2]))
+    jv! = (x) -> Jvop_sat(x, model, T)
+    vectorobj = NLSolvers.VectorObjective(f!,j!,fj!,jv!)
+    vectorprob = NEqProblem(vectorobj)
+    if v0 == nothing
+        try
+            v0    = x0_sat_pure(model)
+            (P_sat,v_l,v_v) = solve_sat_pure(model,v0,vectorprob,T)
+            if abs(v_l-v_v)/v_l<1e-2
+                v0    = x0_sat_pure(model)
+                v0[1] = v0[1]+log10(0.5/0.52)
+                (P_sat,v_l,v_v) = solve_sat_pure(model,v0,vectorprob,T)
+                if abs(v_l-v_v)/v_l<1e-2
+                    v0    = x0_sat_pure(model)
+                    v0[1] = v0[1]+log10(0.5/0.48)
+                    (P_sat,v_l,v_v) = solve_sat_pure(model,v0,vectorprob,T)
+                end
+                return (P_sat,v_l,v_v)
+
+            end
+            return (P_sat,v_l,v_v)
+        catch y
+            if isa(y, DomainError)
+                try
+                    v0    = x0_sat_pure(model)
+                    v0[1] = v0[1]+log10(0.5/0.3)
+                    (P_sat,v_l,v_v) = solve_sat_pure(model,v0,vectorprob,T)
+                    if abs(v_l-v_v)/v_l<1e-2
+                        v0    = x0_sat_pure(model)
+                        v0[1] = v0[1]+log10(0.5/0.32)
+                        (P_sat,v_l,v_v) = solve_sat_pure(model,v0,vectorprob,T)
+                        if abs(v_l-v_v)/v_l<1e-2
+                            v0    = x0_sat_pure(model)
+                            v0[1] = v0[1]+log10(0.5/0.28)
+                            (P_sat,v_l,v_v) = solve_sat_pure(model,v0,vectorprob,T)
+                        end
+                    end
+                    return (P_sat,v_l,v_v)
+                catch y
+                    v0    = x0_sat_pure(model)
+                    v0[1] = v0[1]+log10(0.5/0.4)
+                    (P_sat,v_l,v_v) = solve_sat_pure(model,v0,vectorprob,T)
+                    if abs(v_l-v_v)/v_l<1e-2
+                        v0    = x0_sat_pure(model)
+                        v0[1] = v0[1]+log10(0.5/0.42)
+                        (P_sat,v_l,v_v) = solve_sat_pure(model,v0,vectorprob,T)
+                        if abs(v_l-v_v)/v_l<1e-2
+                            v0    = x0_sat_pure(model)
+                            v0[1] = v0[1]+log10(0.5/0.38)
+                            (P_sat,v_l,v_v) = solve_sat_pure(model,v0,vectorprob,T)
+                        end
+                    end
+                    return (P_sat,v_l,v_v)
+                end
+
+            end
+        end
+    else
+        (P_sat,v_l,v_v) = solve_sat_pure(model,v0,vectorprob,T)
+        return (P_sat,v_l,v_v)
+    end
+
+end
+
+function solve_sat_pure(model::EoS,v0,vectorprob,T)
+    r = solve(vectorprob, v0, LineSearch(Newton()), NEqOptions())
+    v_l = exp10(r.info.solution[1])
+    v_v = exp10(r.info.solution[2])
+    P_sat = get_pressure(model,exp10(r.info.solution[2]),T)
+    return (P_sat,v_l,v_v)
 end
 
 function Obj_Sat(model::EoS, F, T, v_l, v_v)
@@ -113,22 +176,39 @@ function Jac_Sat(model::EoS, J, T, v_l, v_v)
     J[2,2] = -v_v[1]*d2f_v[1,2]*log(10)*μ_scale
 end
 
+function Obj_Jac_sat(model::EoS, F, J, T, v_l, v_v)
+    Obj_Sat(model, F, T, v_l, v_v)
+    Jac_Sat(model, J, T, v_l, v_v)
+    F, J
+end
+
+function Jvop_sat(x,model::EoS,T)
+    function Jac_satV(Fv, v)
+        components = model.components
+        fun(z) = eos(model, create_z(model, [z[1]]), z[2], T)
+        d2f(z) = ForwardDiff.hessian(fun,z)
+        d2f_l = d2f([1,x[1]])
+        d2f_v = d2f([1,x[2]])
+        (p_scale,μ_scale) = scale_sat_pure(model)
+        Fv[1,] =  x[1]*d2f_l[2,2]*log(10)*p_scale*v[1]-x[2]*d2f_v[2,2]*log(10)*p_scale*v[2]
+        Fv[2,] =  x[1]*d2f_l[1,2]*log(10)*μ_scale*v[1]-x[2]*d2f_v[1,2]*log(10)*μ_scale*v[2]
+    end
+    LinearMap(Jac_satV, length(x))
+end
+
 function get_enthalpy_vap(model::EoS, T)
     (P_sat,v_l,v_v) = get_sat_pure(model,T)
     fun(x) = eos(model, create_z(model,[1.0]), x[1], x[2])
     df(x)  = ForwardDiff.gradient(fun,x)
-    H_vap = []
-    for i in 1:length(T)
-        H_l = fun([v_l[i],T[i]])-df([v_l[i],T[i]])[2]*T[i]-df([v_l[i],T[i]])[1]*v_l[i]
-        H_v = fun([v_v[i],T[i]])-df([v_v[i],T[i]])[2]*T[i]-df([v_v[i],T[i]])[1]*v_v[i]
-        append!(H_vap,H_v-H_l)
-    end
+    H_l = fun([v_l,T])-df([v_l,T])[2]*T-df([v_l,T])[1]*v_l
+    H_v = fun([v_v,T])-df([v_v,T])[2]*T-df([v_v,T])[1]*v_v
+    H_vap=H_v-H_l
     return H_vap
 end
 ## Pure critical point solver
 function get_crit_pure(model::EoS; units = false, output=[u"K", u"Pa", u"m^3"])
     components = model.components
-    T̄  = T_scale(model)
+    T̄  = T_crit_pure(model)
     f! = (F,x) -> Obj_Crit(model, F, x[1]*T̄, exp10(x[2]))
     # j! = (J,x) -> Jac_Crit(J,eos,model,x[1]*model.params.epsilon[(1, 1)],exp10(x[2]))
     x0 = x0_crit_pure(model)
@@ -153,15 +233,17 @@ function Obj_Crit(model::EoS, F, T_c, v_c)
 end
 
 ## Mixture saturation solver
-function get_bubble_pressure(model, T, x)
+function get_bubble_pressure(model, T, x; v0 =nothing)
     components = model.components
-    y0    = 10 .*x[1,:]./(1 .+x[1,:].*(10-1))
-    y0    = y0 ./sum(y0[i] for i in 1:length(components))
-    X     = create_z(model,x[1,:])
-    Y0    = create_z(model,y0)
-    v0    = [log10(π/6*N_A*sum(X[i]*model.params.segment[i]*model.params.sigma[i]^3 for i in components)/0.45),
-             log10(π/6*N_A*sum(Y0[i]*model.params.segment[i]*model.params.sigma[i]^3 for i in components)/1e-4)]
-    append!(v0,y0[1:end-1])
+    if v0 == nothing
+        y0    = 10 .*x[1,:]./(1 .+x[1,:].*(10-1))
+        y0    = y0 ./sum(y0[i] for i in 1:length(components))
+        X     = create_z(model,x[1,:])
+        Y0    = create_z(model,y0)
+        v0    = [log10(π/6*N_A*sum(X[i]*model.params.segment[i]*model.params.sigma[i]^3 for i in components)/0.45),
+                 log10(π/6*N_A*sum(Y0[i]*model.params.segment[i]*model.params.sigma[i]^3 for i in components)/1e-4)]
+        append!(v0,y0[1:end-1])
+    end
     v_l   = []
     v_v   = []
     y     = deepcopy(x)
