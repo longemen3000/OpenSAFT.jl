@@ -63,3 +63,22 @@ returns the name of the equation of state.
 """
 eos_name(eos::EoS)::String = string(nameof(typeof(eos)))
 
+#there is the need for 3 types of structs to store parameters:
+
+#1 - like: parameters only dependent on itself
+#2 - unlike: parameters with interactions
+# assoc -parameters with specific interactions.
+
+#=
+strategy for 1:
+    csv -> extract by initial names
+    result: vector of size N
+
+strategy for 2:
+    csv -> extract by initial names -> materialize in matrix via iteration and fill
+    result: matrix of size (N,N)
+
+strategy for 3:
+    csv -> extract by initial names -> materialize in matrix via iteration and fill
+    result: tensor of size (N,N,assoc)
+=#

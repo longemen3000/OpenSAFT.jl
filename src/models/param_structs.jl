@@ -63,31 +63,7 @@ struct SAFTgammaMieParams <: Params
     n_sites::DefaultDict
 end
 
-struct vdWParams <: Params
-    a::Dict
-    b::Dict
-    Tc::Dict
-end
 
-struct RKParams <: Params
-    a::Dict
-    b::Dict
-    Tc::Float64
-end
-
-struct SRKParams <: Params
-    a::Dict
-    b::Dict
-    Tc::Dict
-    acentric_fac::Dict
-end
-
-struct PRParams <: Params
-    a::Dict
-    b::Dict
-    Tc::Dict
-    acentric_fac::Dict
-end
 
 struct CPAParams <: Params
     a::Dict
@@ -98,3 +74,16 @@ struct CPAParams <: Params
     bond_vol::Dict
     n_sites::Dict
 end
+
+
+struct CubicParams <: Params
+    mw::Vector{Float64}
+    a::Vector{Float64} #Ωₐ*(R*Tc)²/Pc
+    b::Vector{Float64} #Ωᵦ*(R*Tc)/Pc
+    Tc::Vector{Float64}
+    Pc::Vector{Float64}
+    ω::Vector{Float64} #acentric_fac
+    Aij::Matrix{Float64} #aij = 1- kij, used if has_Aij == true
+    has_Aij::Bool
+end
+

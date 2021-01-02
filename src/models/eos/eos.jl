@@ -5,6 +5,7 @@ end
 function eos(model::Cubic, z, v, T)
     return N_A*k_B*sum(z) * T*a_tot(model,z,v,T)
 end
+
 """
 The EoS is extensible to other types of equations.
 

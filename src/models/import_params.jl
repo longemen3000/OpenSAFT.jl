@@ -282,3 +282,20 @@ function create_CPAParams(raw_params)
     end
     return CPAParams(a,b,c1,Tc,epsilon_assoc,bond_vol,n_sites)
 end
+
+function create_CubicParams(raw_params,Ωa,Ωb)
+    like_params_dict, unlike_params_dict, assoc_params_dict =
+        filterparams(raw_params, ["Tc", "pc","w"];
+                     unlike_params = ["k"])
+    k  = unlike_params_dict["k"]
+    pc = like_params_dict["pc"]
+    Tc = like_params_dict["Tc"]
+    acentric_fac = like_params_dict["w"]
+    a  = Dict()
+    b  = Dict()
+    for i in keys(like_params_dict["Tc"])
+        a[i] = Ωa*R̄^2*Tc[i]^2/pc[i]/1e6
+        b[i] = Ωb*R̄*Tc[i]/pc[i]/1e6
+    end
+    return PRParams(a,b,Tc,acentric_fac)
+end

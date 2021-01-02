@@ -9,15 +9,16 @@ abstract type SAFTVRMieFamily <: SAFT end
 abstract type SAFTVRQMieFamily <: SAFT end
 abstract type SAFTgammaMieFamily <: SAFT end
 
-abstract type vdWFamily <: Cubic end
-abstract type RKFamily <: Cubic end
-abstract type SRKFamily <: Cubic end
-abstract type PRFamily <: Cubic end
+#cubics whose volume roots can be solved via polynomials
+abstract type StandardCubic <: Cubic end 
+abstract type vdWFamily <: StandardCubic end
+abstract type RKFamily <: StandardCubic end
+abstract type SRKFamily <: StandardCubic end
+abstract type PRFamily <: StandardCubic end
 abstract type CPAFamily <: Cubic end
 
 #to allow broadcasting without problems
 Base.broadcastable(model::EoS) = Ref(model)
-
 
 struct SAFTVRMie <: SAFTVRMieFamily
     components::Array{Set{String},1}
@@ -52,24 +53,28 @@ struct SAFTgammaMie <: SAFTgammaMieFamily
     params::SAFTgammaMieParams
 end
 
-struct vdW <: vdWFamily
-    components::Array{Set{String},1}
-    params::vdWParams
+struct vdW{VARIANT} <: vdWFamily
+    components::Vector{String}
+    params::CubicParams
+    variant::VARIANT
 end
 
-struct RK <: RKFamily
-    components::Array{Set{String},1}
-    params::RKParams
+struct RK{VARIANT} <: RKFamily
+    components::Vector{String}
+    params::CubicParams
+    variant::VARIANT
 end
 
-struct SRK <: SRKFamily
-    components::Array{Set{String},1}
-    params::SRKParams
+struct SRK{VARIANT} <: SRKFamily
+    components::Vector{String}
+    params::CubicParams
+    variant::VARIANT
 end
 
-struct PR <: PRFamily
-    components::Array{Set{String},1}
-    params::PRParams
+struct PR{VARIANT} <: PRFamily
+    components::Vector{String}
+    params::CubicParams
+    variant::VARIANT
 end
 
 struct CPA <: CPAFamily
